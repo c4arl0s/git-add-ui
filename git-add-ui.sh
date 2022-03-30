@@ -1,14 +1,27 @@
 UNTRACKED_FILES=$(git ls-files --others --exclude-standard)
 MODIFIED_FILES=$(git ls-files -m)
-ANSWER=$(dialog --checklist "Choose what you want to install:" 0 0 0 file mysql on file java on file git off --output-fd 1)
-echo "Has elegido: $ANSWER"
-echo "untracked files: $UNTRACKED_FILES"
-echo "modified files: $MODIFIED_FILES"
-git ls-files --others --exclude-standard | while read FILE
-do
-    echo "this is an untracked file: $FILE"
-done
-git ls-files -m | while read FILE
-do
-    echo "this is a modified file: $FILE"
-done
+
+if [[ $UNTRACKED_FILES ]]; then
+    LINE=$(for FILE in ${UNTRACKED_FILES[@]}
+    do
+        echo "$FILE $FILE off"
+    done)
+    # echo $LINE | tr -d '\r'
+    ANSWER=$(dialog --checklist "untracked files to add:" 0 0 0 $LINE --output-fd 1)
+    git add $ANSWER
+else
+    echo  "untracked files dont exist"
+fi
+
+if [[ $MODIFIED_FILES ]]; then
+    LINE=$(for FILE in ${MODIFIED_FILES[@]}
+    do
+        echo "$FILE $FILE off"
+    done)
+    # echo $LINE | tr -d '\r'
+    ANSWER=$(dialog --checklist "modified files to add:" 0 0 0 $LINE --output-fd 1)
+    git add $ANSWER
+else
+    echo  "modified files dont  exist"
+fi
+
