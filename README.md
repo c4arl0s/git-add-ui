@@ -26,5 +26,6 @@ echo $LINE | xargs dialog --stdout --checklist "untracked files to add:" 0 0 0)
 brew install dialog
 ```
 
-<img width="1624" alt="Screen Shot 2022-04-02 at 1 24 52 p m" src="https://user-images.githubusercontent.com/24994818/161398167-ae4dc18e-5374-40f4-a37f-866b933e9172.png">
+<img width="995" alt="Screen Shot 2022-05-09 at 8 42 22 p m" src="https://user-images.githubusercontent.com/24994818/167525722-5d211bb2-9e18-4e9b-ba84-866a79310357.png">
 
+<img width="424" alt="Screen Shot 2022-05-09 at 8 42 53 p m" src="https://user-images.githubusercontent.com/24994818/167525776-1652e713-4bf1-4e96-9e93-da97d8bf06e5.png">

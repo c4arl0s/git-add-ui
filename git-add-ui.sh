@@ -5,16 +5,11 @@ if [[ $UNTRACKED_FILES ]]; then
     LINE=$(git ls-files --others --exclude-standard | while read UNTRACKED_FILE
     do
         let "COUNTER+=1" 
-        echo "\"$COUNTER\" \"$UNTRACKED_FILE\" off"
+        echo "\"$UNTRACKED_FILE\" \"$COUNTER\" off"
     done)
     echo $LINE;
-    SELECTED_FILES=$(echo $LINE | xargs dialog --stdout --checklist "untracked files to add:" 0 0 0)
-    ADDED_FILES=$(echo $SELECTED_FILES | while read SELECTED_FILE
-    do 
-        echo "\"$SELECTED_FILE\""
-    done)
-    echo $ADDED_FILES
-    git add $ADDED_FILES
+    SELECTED_UNTRACKED_FILES=$(echo $LINE | xargs dialog --stdout --checklist "untracked files to add:" 0 0 0)
+    echo $SELECTED_UNTRACKED_FILES | xargs git add
 else
     echo  "untracked files dont exist"
 fi
@@ -24,12 +19,11 @@ if [[ $MODIFIED_FILES ]]; then
     LINE=$(git ls-files -m | while read MODIFIED_FILE
     do
         let "COUNTER+=1" 
-        echo "\"$COUNTER\" \"$MODIFIED_FILES\" off"
+        echo "\"$MODIFIED_FILE\" \"$COUNTER\" off"
     done)
     echo $LINE
-    ANSWER=$(echo $LINE | xargs dialog --stdout --checklist "modified files to add:" 0 0 0)
-    echo $ANSWER
-    git add $ANSWER
+    SELECTED_MODIFIED_FILES=$(echo $LINE | xargs dialog --stdout --checklist "modified files to add:" 0 0 0)
+    echo $SELECTED_MODIFIED_FILES | xargs git add
 else
     echo  "modified files dont  exist"
 fi
