@@ -26,6 +26,10 @@ echo $LINE | xargs dialog --stdout --checklist "untracked files to add:" 0 0 0)
 brew install dialog
 ```
 
-<img width="995" alt="Screen Shot 2022-05-09 at 8 42 22 p m" src="https://user-images.githubusercontent.com/24994818/167525722-5d211bb2-9e18-4e9b-ba84-866a79310357.png">
+# [How to use it](https://github.com/c4arl0s/git-add-user-interface-script#git-add-user-interface-script)
 
-<img width="424" alt="Screen Shot 2022-05-09 at 8 42 53 p m" src="https://user-images.githubusercontent.com/24994818/167525776-1652e713-4bf1-4e96-9e93-da97d8bf06e5.png">
+```console
+./git-add-ui.sh
+```
+
+<img width="1624" alt="Screen Shot 2022-05-12 at 10 28 10 p m" src="https://user-images.githubusercontent.com/24994818/168206056-046d0310-8a9f-4a52-b83d-4003e5262d5c.png">
