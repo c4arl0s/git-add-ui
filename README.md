@@ -41,9 +41,6 @@ brew install dialog
 #
 # git-add-ui script uses an user interface to add files to the stage area
 
-untracked_files=$(git ls-files --others --exclude-standard)
-modified_files=$(git ls-files -m)
-
 readonly UNTRACKED_FILES_MSG='Untracked files to add, select them:'
 readonly MODIFIED_FILES_MSG='Modified files to add, select them:'
 
@@ -54,9 +51,15 @@ readonly DIDNT_SELECT_UNT_MSG='You did not select any untracked file'
 readonly DIDNT_SELECT_MOD_MSG='You did not select any modified file'
 
 readonly SUCCESS_MSG='Selected files were staged'
+readonly ERROR_REPO="Current directory is not a git repository"
 
 warning_untracked_msg=
 warning_modified_msg=
+
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { error ${ERROR_REPO}; return 1; }
+
+untracked_files=$(git ls-files --others --exclude-standard)
+modified_files=$(git ls-files -m)
 
 #######################################
 # A function to print out error messages 
