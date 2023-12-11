@@ -54,6 +54,7 @@ if [[ -n ${untracked_files} ]]; then
   selected_untracked_files=$(echo "${line}" | xargs dialog --stdout --checklist ${UNTRACKED_FILES_MSG} 0 0 0)
   [[ -n "${selected_untracked_files}" ]] \
     && echo ${selected_untracked_files} | xargs git add \
+    && echo "🟢 ${SUCCESS_MSG}" \
     || warning_untracked_msg=${DIDNT_SELECT_UNT_MSG}
 else
   error ${UNTRACKED_ERROR_MSG}
