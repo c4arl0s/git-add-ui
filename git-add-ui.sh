@@ -17,7 +17,8 @@ readonly ERROR_REPO="Current directory is not a git repository"
 warning_untracked_msg=
 warning_modified_msg=
 
-git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { error ${ERROR_REPO}; return 1; }
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+  || { error ${ERROR_REPO}; return 1; }
 
 untracked_files=$(git ls-files --others --exclude-standard)
 modified_files=$(git ls-files -m)
@@ -51,7 +52,8 @@ if [[ -n ${untracked_files} ]]; then
         let "counter+=1"
         echo "\"${untracked_file}\" \"${counter}\" off"
       done)
-  selected_untracked_files=$(echo "${line}" | xargs dialog --stdout --checklist ${UNTRACKED_FILES_MSG} 0 0 0)
+  selected_untracked_files=$(echo "${line}" \
+    | xargs dialog --stdout --checklist ${UNTRACKED_FILES_MSG} 0 0 0)
   [[ -n "${selected_untracked_files}" ]] \
     && echo ${selected_untracked_files} | xargs git add \
     && echo "🟢 ${SUCCESS_MSG}" \
@@ -67,7 +69,8 @@ if [[ -n ${modified_files} ]]; then
         let "counter+=1"
         echo "\"${modified_file}\" \"${counter}\" off"
       done)
-  selected_modified_files=$(echo "${line}" | xargs dialog --stdout --checklist ${MODIFIED_FILES_MSG} 0 0 0)
+  selected_modified_files=$(echo "${line}" \
+    | xargs dialog --stdout --checklist ${MODIFIED_FILES_MSG} 0 0 0)
   [[ -n "${selected_modified_files}" ]] \
     && echo ${selected_modified_files} | xargs git add \
     && echo "🟢 ${SUCCESS_MSG}" \
