@@ -14,6 +14,8 @@ readonly DIDNT_SELECT_MOD_MSG='You did not select any modified file'
 readonly SUCCESS_MSG='Selected files were staged'
 readonly ERROR_REPO="Current directory is not a git repository"
 
+readonly ARE_YOU_SURE_MSG='Are you sure you want to add these files?:'
+
 warning_untracked_msg=
 warning_modified_msg=
 
@@ -47,7 +49,7 @@ warning() {
 
 are_you_sure_msg() {
   selected_untracked_files=$1
-  dialog --title "Are you sure you want to add these files?: ${selected_untracked_files}" \
+  dialog --title "${ARE_YOU_SURE_MSG} ${selected_untracked_files}" \
     --yesno "continue?" 0 0
 }
 

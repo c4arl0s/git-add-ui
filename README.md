@@ -53,10 +53,13 @@ readonly DIDNT_SELECT_MOD_MSG='You did not select any modified file'
 readonly SUCCESS_MSG='Selected files were staged'
 readonly ERROR_REPO="Current directory is not a git repository"
 
+readonly ARE_YOU_SURE_MSG='Are you sure you want to add these files?:'
+
 warning_untracked_msg=
 warning_modified_msg=
 
-git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { error ${ERROR_REPO}; return 1; }
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+  || { error ${ERROR_REPO}; return 1; }
 
 untracked_files=$(git ls-files --others --exclude-standard)
 modified_files=$(git ls-files -m)
@@ -83,6 +86,12 @@ warning() {
   echo "[🟡 $(date +'%Y-%m-%dT%H:%M:%S%z')]: $*" >&2
 }
 
+are_you_sure_msg() {
+  selected_untracked_files=$1
+  dialog --title "${ARE_YOU_SURE_MSG} ${selected_untracked_files}" \
+    --yesno "continue?" 0 0
+}
+
 if [[ -n ${untracked_files} ]]; then
   let counter=0
   line=$(git ls-files --others --exclude-standard \
@@ -90,9 +99,12 @@ if [[ -n ${untracked_files} ]]; then
         let "counter+=1"
         echo "\"${untracked_file}\" \"${counter}\" off"
       done)
-  selected_untracked_files=$(echo "${line}" | xargs dialog --stdout --checklist ${UNTRACKED_FILES_MSG} 0 0 0)
+  selected_untracked_files=$(echo "${line}" \
+    | xargs dialog --stdout --checklist ${UNTRACKED_FILES_MSG} 0 0 0)
   [[ -n "${selected_untracked_files}" ]] \
+    && are_you_sure_msg ${selected_untracked_files} \
     && echo ${selected_untracked_files} | xargs git add \
+    && echo "🟢 ${SUCCESS_MSG}" \
     || warning_untracked_msg=${DIDNT_SELECT_UNT_MSG}
 else
   error ${UNTRACKED_ERROR_MSG}
@@ -105,8 +117,10 @@ if [[ -n ${modified_files} ]]; then
         let "counter+=1"
         echo "\"${modified_file}\" \"${counter}\" off"
       done)
-  selected_modified_files=$(echo "${line}" | xargs dialog --stdout --checklist ${MODIFIED_FILES_MSG} 0 0 0)
+  selected_modified_files=$(echo "${line}" \
+    | xargs dialog --stdout --checklist ${MODIFIED_FILES_MSG} 0 0 0)
   [[ -n "${selected_modified_files}" ]] \
+    && are_you_sure_msg ${selected_modified_files} \
     && echo ${selected_modified_files} | xargs git add \
     && echo "🟢 ${SUCCESS_MSG}" \
     || warning_modified_msg=${DIDNT_SELECT_MOD_MSG}
