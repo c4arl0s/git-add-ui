@@ -16,8 +16,48 @@ readonly ERROR_REPO="Current directory is not a git repository"
 
 readonly ARE_YOU_SURE_MSG='Are you sure you want to add these files?:'
 
+# Dependency error messages
+readonly DIALOG_MISSING_MSG='dialog command not found. Please install dialog package.'
+readonly GIT_MISSING_MSG='git command not found. Please install git package.'
+readonly DIALOG_INSTALL_INSTRUCTIONS='Install dialog using: brew install dialog (macOS) or sudo apt-get install dialog (Ubuntu/Debian)'
+readonly GIT_INSTALL_INSTRUCTIONS='Install git using: brew install git (macOS) or sudo apt-get install git (Ubuntu/Debian)'
+
 warning_untracked_msg=
 warning_modified_msg=
+
+#######################################
+# Check if required dependencies are installed
+# Globals: None
+# Arguments: None
+# Returns: 0 if all dependencies are available, 1 otherwise
+#######################################
+check_dependencies() {
+  local missing_deps=0
+  
+  # Check if dialog is installed
+  if ! command -v dialog >/dev/null 2>&1; then
+    error "${DIALOG_MISSING_MSG}"
+    echo "💡 ${DIALOG_INSTALL_INSTRUCTIONS}" >&2
+    missing_deps=1
+  fi
+  
+  # Check if git is installed
+  if ! command -v git >/dev/null 2>&1; then
+    error "${GIT_MISSING_MSG}"
+    echo "💡 ${GIT_INSTALL_INSTRUCTIONS}" >&2
+    missing_deps=1
+  fi
+  
+  if [[ ${missing_deps} -eq 1 ]]; then
+    echo "❌ Please install the missing dependencies and try again." >&2
+    return 1
+  fi
+  
+  return 0
+}
+
+# Check dependencies before proceeding
+check_dependencies || return 1
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
   || { error ${ERROR_REPO}; return 1; }
