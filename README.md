@@ -34,6 +34,22 @@ sudo apt-get install dialog
 sudo yum install dialog
 ```
 
+### Installation
+
+1. Clone or download this repository and `cd` into the project directory.
+
+2. Make the install script executable (if needed):
+
+   ```sh
+   chmod +x install.sh
+   ```
+
+3. Run the installer:
+
+   ```sh
+   ./install.sh
+   ```
+
 ### Usage
 
 1. Make the script executable:
