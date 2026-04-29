@@ -16,51 +16,11 @@ readonly ERROR_REPO="Current directory is not a git repository"
 
 readonly ARE_YOU_SURE_MSG='Are you sure you want to add these files?:'
 
-# Dependency error messages
-readonly DIALOG_MISSING_MSG='dialog command not found. Please install dialog package.'
-readonly GIT_MISSING_MSG='git command not found. Please install git package.'
-readonly DIALOG_INSTALL_INSTRUCTIONS='Install dialog using: brew install dialog (macOS) or sudo apt-get install dialog (Ubuntu/Debian)'
-readonly GIT_INSTALL_INSTRUCTIONS='Install git using: brew install git (macOS) or sudo apt-get install git (Ubuntu/Debian)'
-
 warning_untracked_msg=
 warning_modified_msg=
 
-#######################################
-# Check if required dependencies are installed
-# Globals: None
-# Arguments: None
-# Returns: 0 if all dependencies are available, 1 otherwise
-#######################################
-check_dependencies() {
-  local missing_deps=0
-  
-  # Check if dialog is installed
-  if ! command -v dialog >/dev/null 2>&1; then
-    error "${DIALOG_MISSING_MSG}"
-    echo "💡 ${DIALOG_INSTALL_INSTRUCTIONS}" >&2
-    missing_deps=1
-  fi
-  
-  # Check if git is installed
-  if ! command -v git >/dev/null 2>&1; then
-    error "${GIT_MISSING_MSG}"
-    echo "💡 ${GIT_INSTALL_INSTRUCTIONS}" >&2
-    missing_deps=1
-  fi
-  
-  if [[ ${missing_deps} -eq 1 ]]; then
-    echo "❌ Please install the missing dependencies and try again." >&2
-    return 1
-  fi
-  
-  return 0
-}
-
-# Check dependencies before proceeding
-check_dependencies || return 1
-
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
-  || { error ${ERROR_REPO}; return 1; }
+  || { error "${ERROR_REPO}"; exit 1; }
 
 untracked_files=$(git ls-files --others --exclude-standard)
 modified_files=$(git ls-files -m)
@@ -88,46 +48,69 @@ warning() {
 }
 
 are_you_sure_msg() {
-  selected_untracked_files=$1
-  dialog --title "${ARE_YOU_SURE_MSG} ${selected_untracked_files}" \
+  selected_files=$1
+  dialog --title "${ARE_YOU_SURE_MSG} ${selected_files}" \
     --yesno "continue?" 0 0
 }
 
+build_checklist_args() {
+  local files_list="$1"
+  local -n output_args_ref=$2
+  local counter=0
+  output_args_ref=()
+
+  while IFS= read -r file; do
+    [[ -z "${file}" ]] && continue
+    counter=$((counter + 1))
+    output_args_ref+=("${counter}" "${file}" "off")
+  done <<< "${files_list}"
+}
+
+add_selected_files() {
+  local files_list="$1"
+  local selected_indexes="$2"
+  local -a files=()
+  local -a selected_files=()
+  local selected_index
+
+  while IFS= read -r file; do
+    [[ -z "${file}" ]] && continue
+    files+=("${file}")
+  done <<< "${files_list}"
+
+  while IFS= read -r selected_index; do
+    [[ -z "${selected_index}" ]] && continue
+    selected_files+=("${files[selected_index-1]}")
+  done <<< "${selected_indexes}"
+
+  [[ ${#selected_files[@]} -eq 0 ]] && return 1
+
+  are_you_sure_msg "${selected_files[*]}" \
+    && git add -- "${selected_files[@]}" \
+    && echo "🟢 ${SUCCESS_MSG}"
+}
+
 if [[ -n ${untracked_files} ]]; then
-  let counter=0
-  line=$(git ls-files --others --exclude-standard \
-    | while read untracked_file; do 
-        let "counter+=1"
-        echo "\"${untracked_file}\" \"${counter}\" off"
-      done)
-  selected_untracked_files=$(echo "${line}" \
-    | xargs dialog --stdout --checklist ${UNTRACKED_FILES_MSG} 0 0 0)
+  build_checklist_args "${untracked_files}" untracked_checklist_args
+  selected_untracked_files=$(dialog --stdout --separate-output --checklist \
+    "${UNTRACKED_FILES_MSG}" 0 0 0 "${untracked_checklist_args[@]}")
   [[ -n "${selected_untracked_files}" ]] \
-    && are_you_sure_msg ${selected_untracked_files} \
-    && echo ${selected_untracked_files} | xargs git add \
-    && echo "🟢 ${SUCCESS_MSG}" \
+    && add_selected_files "${untracked_files}" "${selected_untracked_files}" \
     || warning_untracked_msg=${DIDNT_SELECT_UNT_MSG}
 else
-  error ${UNTRACKED_ERROR_MSG}
+  error "${UNTRACKED_ERROR_MSG}"
 fi
 
 if [[ -n ${modified_files} ]]; then
-  let counter=0
-  line=$(git ls-files -m \
-    | while read modified_file; do 
-        let "counter+=1"
-        echo "\"${modified_file}\" \"${counter}\" off"
-      done)
-  selected_modified_files=$(echo "${line}" \
-    | xargs dialog --stdout --checklist ${MODIFIED_FILES_MSG} 0 0 0)
+  build_checklist_args "${modified_files}" modified_checklist_args
+  selected_modified_files=$(dialog --stdout --separate-output --checklist \
+    "${MODIFIED_FILES_MSG}" 0 0 0 "${modified_checklist_args[@]}")
   [[ -n "${selected_modified_files}" ]] \
-    && are_you_sure_msg ${selected_modified_files} \
-    && echo ${selected_modified_files} | xargs git add \
-    && echo "🟢 ${SUCCESS_MSG}" \
+    && add_selected_files "${modified_files}" "${selected_modified_files}" \
     || warning_modified_msg=${DIDNT_SELECT_MOD_MSG}
 else
-  error ${MODIFIED_ERROR_MSG}
+  error "${MODIFIED_ERROR_MSG}"
 fi
 
-[[ -n "${warning_untracked_msg}" ]] && warning ${warning_untracked_msg}
-[[ -n "${warning_modified_msg}" ]] && warning ${warning_modified_msg}
+[[ -n "${warning_untracked_msg}" ]] && warning "${warning_untracked_msg}"
+[[ -n "${warning_modified_msg}" ]] && warning "${warning_modified_msg}"

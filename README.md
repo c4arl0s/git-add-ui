@@ -1,7 +1,6 @@
 # Git Add UI Script
 
 A user-friendly bash script that provides an interactive interface for adding files to Git's staging area using dialog boxes.
-
 [← Back to overview](https://github.com/c4arl0s#bash-scripts)
 
 ## 📋 Description
