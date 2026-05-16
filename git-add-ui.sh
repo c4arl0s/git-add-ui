@@ -92,8 +92,12 @@ add_selected_files() {
 
 if [[ -n ${untracked_files} ]]; then
   build_checklist_args "${untracked_files}" untracked_checklist_args
-  selected_untracked_files=$(dialog --stdout --separate-output --checklist \
-    "${UNTRACKED_FILES_MSG}" 0 0 0 "${untracked_checklist_args[@]}")
+  temp_untracked=$(mktemp)
+  dialog --separate-output --no-collapse --checklist \
+    "${UNTRACKED_FILES_MSG}" 0 0 0 "${untracked_checklist_args[@]}" 2> "${temp_untracked}"
+  selected_untracked_files=$(cat "${temp_untracked}")
+  rm -f "${temp_untracked}"
+
   [[ -n "${selected_untracked_files}" ]] \
     && add_selected_files "${untracked_files}" "${selected_untracked_files}" \
     || warning_untracked_msg=${DIDNT_SELECT_UNT_MSG}
@@ -103,8 +107,12 @@ fi
 
 if [[ -n ${modified_files} ]]; then
   build_checklist_args "${modified_files}" modified_checklist_args
-  selected_modified_files=$(dialog --stdout --separate-output --checklist \
-    "${MODIFIED_FILES_MSG}" 0 0 0 "${modified_checklist_args[@]}")
+  temp_modified=$(mktemp)
+  dialog --separate-output --no-collapse --checklist \
+    "${MODIFIED_FILES_MSG}" 0 0 0 "${modified_checklist_args[@]}" 2> "${temp_modified}"
+  selected_modified_files=$(cat "${temp_modified}")
+  rm -f "${temp_modified}"
+
   [[ -n "${selected_modified_files}" ]] \
     && add_selected_files "${modified_files}" "${selected_modified_files}" \
     || warning_modified_msg=${DIDNT_SELECT_MOD_MSG}
