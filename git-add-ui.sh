@@ -22,15 +22,8 @@ warning_modified_msg=
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
   || { error "${ERROR_REPO}"; exit 1; }
 
-untracked_files=$(git ls-files --others --exclude-standard)
-modified_files=$(git ls-files -m)
-
 #######################################
 # A function to print out error messages 
-# Globals:
-#   
-# Arguments:
-#   None
 #######################################
 error() {
   echo "[🔴 $(date +'%Y-%m-%dT%H:%M:%S%z')]: $*" >&2
@@ -38,76 +31,107 @@ error() {
 
 #######################################
 # A function to print out warning messages 
-# Globals:
-#   
-# Arguments:
-#   None
 #######################################
 warning() {
   echo "[🟡 $(date +'%Y-%m-%dT%H:%M:%S%z')]: $*" >&2
 }
 
 are_you_sure_msg() {
-  selected_files=$1
+  local selected_files=$1
   dialog --title "${ARE_YOU_SURE_MSG} ${selected_files}" \
     --yesno "continue?" 0 0
 }
 
+get_git_files() {
+  local type="$1"
+  if [[ "${type}" == "untracked" ]]; then
+    git ls-files --others --exclude-standard
+  else
+    git ls-files -m
+  fi
+}
+
 build_checklist_args() {
-  local files_list="$1"
+  local type="$1"
   local -n output_args_ref=$2
   local counter=0
   output_args_ref=()
 
-  while IFS= read -r file; do
+  while IFS= read -r file || [[ -n "${file}" ]]; do
     [[ -z "${file}" ]] && continue
     counter=$((counter + 1))
     output_args_ref+=("${counter}" "${file}" "off")
-  done <<< "${files_list}"
+  done < <(get_git_files "${type}")
 }
 
 add_selected_files() {
-  local files_list="$1"
+  local type="$1"
   local selected_indexes="$2"
   local -a files=()
   local -a selected_files=()
-  local selected_index
 
-  while IFS= read -r file; do
-    [[ -z "${file}" ]] && continue
-    files+=("${file}")
-  done <<< "${files_list}"
+  # Populate files array
+  while IFS= read -r file || [[ -n "${file}" ]]; do
+    [[ -n "${file}" ]] && files+=("${file}")
+  done < <(get_git_files "${type}")
 
-  while IFS= read -r selected_index; do
-    [[ -z "${selected_index}" ]] && continue
-    selected_files+=("${files[selected_index-1]}")
-  done <<< "${selected_indexes}"
+  # Populate selected_files array (handles both space and newline separators)
+  for idx in ${selected_indexes}; do
+    if [[ "${idx}" =~ ^[0-9]+$ ]]; then
+      if [[ ${idx} -gt 0 && ${idx} -le ${#files[@]} ]]; then
+        selected_files+=("${files[idx-1]}")
+      fi
+    fi
+  done
 
-  [[ ${#selected_files[@]} -eq 0 ]] && return 1
+  [[ ${#selected_files[@]} -eq 0 ]] && return 0
 
-  are_you_sure_msg "${selected_files[*]}" \
-    && git add -- "${selected_files[@]}" \
-    && echo "🟢 ${SUCCESS_MSG}"
+  if are_you_sure_msg "${selected_files[*]}"; then
+    if git add -- "${selected_files[@]}"; then
+      echo "🟢 ${SUCCESS_MSG}"
+      return 0
+    else
+      return 1 # git add failed
+    fi
+  else
+    return 0 # User cancelled
+  fi
 }
 
-if [[ -n ${untracked_files} ]]; then
-  build_checklist_args "${untracked_files}" untracked_checklist_args
+# Main execution logic
+
+untracked_exists=$(get_git_files "untracked")
+if [[ -n "${untracked_exists}" ]]; then
+  build_checklist_args "untracked" untracked_checklist_args
   selected_untracked_files=$(dialog --stdout --separate-output --checklist \
     "${UNTRACKED_FILES_MSG}" 0 0 0 "${untracked_checklist_args[@]}")
-  [[ -n "${selected_untracked_files}" ]] \
-    && add_selected_files "${untracked_files}" "${selected_untracked_files}" \
-    || warning_untracked_msg=${DIDNT_SELECT_UNT_MSG}
+  dialog_status=$?
+  
+  if [[ ${dialog_status} -eq 0 ]]; then
+    if [[ -z "${selected_untracked_files}" ]]; then
+      warning_untracked_msg=${DIDNT_SELECT_UNT_MSG}
+    else
+      add_selected_files "untracked" "${selected_untracked_files}" || exit 1
+    fi
+  fi
 else
   error "${UNTRACKED_ERROR_MSG}"
 fi
 
-if [[ -n ${modified_files} ]]; then
-  build_checklist_args "${modified_files}" modified_checklist_args
+modified_exists=$(get_git_files "modified")
+if [[ -n "${modified_exists}" ]]; then
+  build_checklist_args "modified" modified_checklist_args
   selected_modified_files=$(dialog --stdout --separate-output --checklist \
     "${MODIFIED_FILES_MSG}" 0 0 0 "${modified_checklist_args[@]}")
-  [[ -n "${selected_modified_files}" ]] \
-    && add_selected_files "${modified_files}" "${selected_modified_files}" \
-    || warning_modified_msg=${DIDNT_SELECT_MOD_MSG}
+  dialog_status=$?
+  
+  if [[ ${dialog_status} -eq 0 ]]; then
+    if [[ -z "${selected_modified_files}" ]]; then
+      warning_modified_msg=${DIDNT_SELECT_MOD_MSG}
+    else
+      add_selected_files "modified" "${selected_modified_files}" || exit 1
+    fi
+  fi
 else
   error "${MODIFIED_ERROR_MSG}"
 fi
